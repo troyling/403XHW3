@@ -2,6 +2,7 @@ package com.starboardland.pedometer;
 
 import android.content.Context;
 import android.hardware.*;
+import android.location.Location;
 import android.os.Bundle;
 
 import android.os.Handler;
@@ -10,14 +11,17 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
 
+import java.sql.SQLException;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class CounterActivity extends FragmentActivity implements SensorEventListener {
-    private final static int ONE_MINUTE = 60000; // in ms
+    //private final static int ONE_MINUTE = 60000; // in ms
 
     private SensorManager sensorManager;
     private TextView count1;
@@ -40,6 +44,7 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     float lastTotalNumStep;
     float totalNumStep;
     boolean isInit = false;
+    StepDataSource dataSource;
 
     final Handler handler = new Handler();
 
@@ -66,6 +71,13 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
         currentSegment = 0;
         lastTotalNumStep = 0;
         startTimer();
+
+        dataSource = new StepDataSource(getApplicationContext());
+        try {
+            dataSource.open();
+        } catch (SQLException e) {
+            Log.e("SQLite", e.getMessage());
+        }
     }
 
     @Override
@@ -99,28 +111,28 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
         }
         switch (currentSegment) {
             case 1:
-                count1.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count1.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 2:
-                count2.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count2.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 3:
-                count3.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count3.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 4:
-                count4.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count4.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 5:
-                count5.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count5.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 6:
-                count6.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count6.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 7:
-                count7.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count7.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
             case 8:
-                count8.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                count8.setText(String.valueOf((int)(deviceStep - lastTotalNumStep)));
                 break;
         }
 
@@ -146,15 +158,17 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
                     public void run() {
                         // add the number os steps to list
                         if (currentSegment <= 8 && currentSegment >= 1) {
-                            String message = "Steps in last one minute: " + (deviceStep - lastTotalNumStep);
+                            int steps = (int)(deviceStep - lastTotalNumStep);
+                            String message = "Steps in last one minute: " + steps;
                             Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
                             toast.show();
+                            dataSource.saveStep(currentSegment, steps);
 
                         }
                         totalNumStep += deviceStep - lastTotalNumStep;
                         lastTotalNumStep = deviceStep;
                         if (currentSegment == 8) {
-                            countTotal.setText(String.valueOf(totalNumStep));
+                            countTotal.setText(String.valueOf((int)totalNumStep));
                         }
                         currentSegment++;
                     }
@@ -178,7 +192,23 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
 
     private void setUpMap() {
         mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getMyLocation();
+        mMap.getUiSettings().setAllGesturesEnabled(false);
+
+        mMap.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(Location location) {
+                if (location != null) {
+                    LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 16));
+                } else {
+                    Log.i("hi", "No location");
+                    Toast toast = Toast.makeText(getApplicationContext(), "Location is currently not available.", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }
+        });
     }
 
 }
