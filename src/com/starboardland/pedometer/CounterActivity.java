@@ -6,8 +6,12 @@ import android.os.Bundle;
 
 import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -26,6 +30,8 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     private TextView count8;
     private TextView countTotal;
 
+    private GoogleMap mMap;
+
     boolean activityRunning;
     Timer timer;
     TimerTask timerTask;
@@ -33,6 +39,7 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     float deviceStep;
     float lastTotalNumStep;
     float totalNumStep;
+    boolean isInit = false;
 
     final Handler handler = new Handler();
 
@@ -40,6 +47,12 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        // Setup map and get location
+        setUpMapIfNeeded();
+        if (mMap != null) {
+            mMap.setMyLocationEnabled(true);
+        }
+
         count1 = (TextView) findViewById(R.id.count1);
         count2 = (TextView) findViewById(R.id.count2);
         count3 = (TextView) findViewById(R.id.count3);
@@ -79,7 +92,38 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     public void onSensorChanged(SensorEvent event) {
         if (activityRunning) {
             deviceStep = event.values[0];
+            if (!isInit) {
+                lastTotalNumStep = deviceStep;
+                isInit = true;
+            }
         }
+        switch (currentSegment) {
+            case 1:
+                count1.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 2:
+                count2.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 3:
+                count3.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 4:
+                count4.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 5:
+                count5.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 6:
+                count6.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 7:
+                count7.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+            case 8:
+                count8.setText(String.valueOf(deviceStep - lastTotalNumStep));
+                break;
+        }
+
     }
 
     @Override
@@ -90,7 +134,7 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
     public void startTimer() {
         timer = new Timer();
         initTimerTask();
-        timer.schedule(timerTask, 0, ONE_MINUTE); //start time every minute
+        timer.schedule(timerTask, 0, 10000); //start time every minute
     }
 
     public void initTimerTask() {
@@ -98,47 +142,43 @@ public class CounterActivity extends FragmentActivity implements SensorEventList
             @Override
             public void run() {
                 handler.post(new Runnable() {
+
                     public void run() {
                         // add the number os steps to list
-                        String message = "ONE MINUTE PASSES";
-                        Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG);
-                        toast.show();
-                        switch (currentSegment) {
-                            case 1:
-                                count1.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 2:
-                                count2.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 3:
-                                count3.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 4:
-                                count4.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 5:
-                                count5.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 6:
-                                count6.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 7:
-                                count7.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                break;
-                            case 8:
-                                count8.setText(String.valueOf(deviceStep - lastTotalNumStep));
-                                totalNumStep += deviceStep - lastTotalNumStep;
-                                countTotal.setText(String.valueOf(totalNumStep));
-                                break;
-                        }
+                        if (currentSegment <= 8 && currentSegment >= 1) {
+                            String message = "Steps in last one minute: " + (deviceStep - lastTotalNumStep);
+                            Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
+                            toast.show();
 
+                        }
                         totalNumStep += deviceStep - lastTotalNumStep;
                         lastTotalNumStep = deviceStep;
+                        if (currentSegment == 8) {
+                            countTotal.setText(String.valueOf(totalNumStep));
+                        }
                         currentSegment++;
                     }
                 });
             }
         };
+    }
+
+    private void setUpMapIfNeeded() {
+        // Do a null check to confirm that we have not already instantiated the map.
+        if (mMap == null) {
+            // Try to obtain the map from the SupportMapFragment.
+            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
+                    .getMap();
+            // Check if we were successful in obtaining the map.
+            if (mMap != null) {
+                setUpMap();
+            }
+        }
+    }
+
+    private void setUpMap() {
+        mMap.setMyLocationEnabled(true);
+        mMap.getMyLocation();
     }
 
 }
